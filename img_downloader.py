@@ -2,7 +2,7 @@
 
 '''
 Sample script for downloading all images from website
-Pixel2008 All Rights Reserved
+Pixel2008 All Rights Reserved ®
 '''
 from typing import List
 import sys, requests, bs4, traceback, os, shutil
