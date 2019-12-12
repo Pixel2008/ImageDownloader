@@ -141,3 +141,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Mine
+mail_config.json
+tmp_download

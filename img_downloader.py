@@ -6,9 +6,11 @@ Pixel2008 All Rights Reserved ®
 '''
 from typing import List
 import sys, requests, bs4, traceback, os, shutil
+import multiprocessing, json, smtplib, threading
 
 def get_url() -> str:
-    def_url = "www.google.pl"
+    def_url = "http://www.google.pl"
+    def_url = "http://dru.pl"
     url = input("Enter url address [press enter key for default url " + def_url + "]: ")
     if len(url) == 0:
         return def_url   
@@ -40,10 +42,10 @@ def prepare_download_dir(start_dir : str) -> str:
     os.makedirs(path)
     return path
 
-def download_all_images(img_links: List, download_path : str):   
-    #print(img_links) 
+def download_images(img_links: List, download_path : str):   
+    #print(img_links)    
     allowed_extensions = ("png","jpg","jpeg")
-    counter = 0
+    counter = 0    
     for img in img_links:        
         url = img        
         name = img[img.rfind("/")+1:]
@@ -72,7 +74,23 @@ def download_all_images(img_links: List, download_path : str):
         except:
             print("Error while downloading")
             continue
-    return counter
+    print("Downloaded",counter)
+
+def download_all_images(img_links: List, download_path : str):   
+    cpu_count = multiprocessing.cpu_count()
+    images_quantity = len(img_links)
+    images_per_thread = images_quantity // cpu_count + 1
+    print("Creating " + str(cpu_count) + " threads to download " + str(images_quantity) + " images (" + str(images_per_thread) + " per thread)")
+
+    i = 0
+    downloadThreads = []
+    for i in range(0, images_quantity, images_per_thread):                
+        downloadThread = threading.Thread(target=download_images, args=(img_links[i:i+images_per_thread], download_path))
+        downloadThreads.append(downloadThread)
+        downloadThread.start()
+
+    for downloadThread in downloadThreads:
+        downloadThread.join()
 
 def get_top_10(download_path : str):
     all_files = []
@@ -83,23 +101,43 @@ def get_top_10(download_path : str):
     all_files.sort(key=lambda x:x[1])
     return all_files[0:10]
 
-def mail_images(top_ten_imaes: List):
-    '''
-        python_test_01@int.pl
-        python_test_02@int.pl
-        imap/smtp poczta.int.pl
-        IMAP: 143 (TLS)
-        SMTP: 465 (TLS)
-    '''
-    pass
+def read_mail_config(file: str):
+    print("Reading configuration from",file)
+    with open(file, "r") as read_file:
+        return json.load(read_file)
+    
+
+def mail():
+    config = read_mail_config(os.path.join(start_path,"mail_config.json"))
+    cfg = config["smtp"]
+    smtp = smtplib.SMTP_SSL(cfg["address"], int(cfg["port"]), timeout=int(cfg["timeout_minutes"]))
+    try:
+        smtp.ehlo()    
+        smtp.login(config["login"],config["password"])
+        subject = "Hello!"
+        text = "Check this out."
+        message = """\
+        Subject: %s
+        
+        %s
+        """ % (subject, text)
+
+        message = """\
+        Subject: Super images
+
+        Check this out in attachment!"""
+        smtp.sendmail(config["login"],[config["receiver"]], message)    
+        {}
+    finally:
+        smtp.quit()
+
 
 if __name__ == "__main__":
     try:
         #clear consloe
         clear = lambda: os.system("cls")
         clear()
-
-
+        
         # url
         url = get_url()
 
@@ -110,26 +148,21 @@ if __name__ == "__main__":
 
         # get img links
         img_links = get_img_links(url)
-                
+      
         # prepare dirs
         start_path = os.path.dirname(os.path.realpath(__file__))
         download_path = prepare_download_dir(start_path)
-
+       
         # download all in multiple threads
-        downloaded = download_all_images(img_links,download_path)
-        print("Downloaded",downloaded,"images")
-
+        download_all_images(img_links,download_path)
+        
         # get top 10 lowest size
         top_10_lowest = get_top_10(download_path)
         print("Lowest size images",top_10_lowest)
-
+    
         # send them by mail
-        mail_images(top_10_lowest)
-        
-        # prepare mail dirs
-
-        # receive mail
-
+        mail()
+        print("Done")
     except requests.exceptions.MissingSchema as e1:
         print("Error occured e1 = " + format(e1))
         print("Call stack:")

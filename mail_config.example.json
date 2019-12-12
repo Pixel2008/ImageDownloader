@@ -1,0 +1,10 @@
+{
+    "imap": {
+        "address": "imap_address",
+        "port": 143,
+        "timeout_minutes": 3
+    },
+    "login": "login",
+    "password": "password",
+    "receiver":"receiver_mail_address"
+}
