@@ -76,7 +76,7 @@ def download_all_images(img_links: List, download_path : str):
 
 def get_top_10(download_path : str):
     all_files = []
-    for (path, dirs, files) in os.walk(download_path):
+    for (path, _, files) in os.walk(download_path):
         for file in files:
             size = os.path.getsize(os.path.join(path,file))
             all_files.append((os.path.join(path,file), size))
